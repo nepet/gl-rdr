@@ -1203,6 +1203,8 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 [[package]]
 name = "gl-client"
 version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d979d7c104e1f0974d1b08723c55bdf84fe04da55982ba84b8ebaca8a9aab9ac"
 dependencies = [
  "aes 0.8.4",
  "anyhow",

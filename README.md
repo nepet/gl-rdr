@@ -26,9 +26,6 @@ dependency compiles `.proto` files during the build. `cargo install` puts
 `glrdr` on your PATH; a plain `cargo build --release` leaves it at
 `target/release/glrdr`.
 
-> The crate currently pins `gl-client` by local path. That switches to
-> `gl-client = "0.6"` from crates.io once published.
-
 ## A first call
 
 You need two things: a credentials file, and to know which network your node is

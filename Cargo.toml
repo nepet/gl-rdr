@@ -24,10 +24,7 @@ serde_json = "1"
 hex = "0.4"
 prost = "0.13"
 prost-reflect = "0.14"
-# Local path dep for development. Cargo resolves gl-client's workspace deps
-# (tonic, vls-core, cln-grpc) via the greenlight workspace root. Switch to
-# `gl-client = "0.6"` (crates.io) before publishing gl-rdr.
-gl-client = { path = "../../greenlight/master/public/libs/gl-client" }
+gl-client = "0.6"
 
 [build-dependencies]
 protox = "0.7"
