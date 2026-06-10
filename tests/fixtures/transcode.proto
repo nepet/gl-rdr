@@ -1,0 +1,28 @@
+syntax = "proto3";
+package fixture;
+
+enum Color {
+  RED = 0;
+  GREEN = 1;
+  BLUE = 2;
+}
+
+message Inner {
+  string note = 1;
+}
+
+message Sample {
+  string name = 1;
+  uint64 big = 2;          // > 2^53, must survive as a number
+  int32 small = 3;
+  bool flag = 4;
+  bytes blob = 5;          // hex on the wire-facing CLI
+  Color color = 6;
+  Inner inner = 7;
+  repeated string tags = 8;
+  repeated bytes blobs = 9;
+}
+
+service Fixture {
+  rpc Echo (Sample) returns (Sample);
+}
