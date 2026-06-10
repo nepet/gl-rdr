@@ -60,9 +60,9 @@ fn json_to_scalar(field: &FieldDescriptor, kind: &Kind, v: &Json) -> Result<Valu
     Ok(match kind {
         Kind::Double => Value::F64(as_f64(field, v)?),
         Kind::Float => Value::F32(as_f64(field, v)? as f32),
-        Kind::Int32 | Kind::Sint32 | Kind::Sfixed32 => Value::I32(as_i64(field, v)? as i32),
+        Kind::Int32 | Kind::Sint32 | Kind::Sfixed32 => Value::I32(as_i32(field, v)?),
         Kind::Int64 | Kind::Sint64 | Kind::Sfixed64 => Value::I64(as_i64(field, v)?),
-        Kind::Uint32 | Kind::Fixed32 => Value::U32(as_u64(field, v)? as u32),
+        Kind::Uint32 | Kind::Fixed32 => Value::U32(as_u32(field, v)?),
         Kind::Uint64 | Kind::Fixed64 => Value::U64(as_u64(field, v)?),
         Kind::Bool => Value::Bool(
             v.as_bool()
@@ -92,6 +92,18 @@ fn json_to_scalar(field: &FieldDescriptor, kind: &Kind, v: &Json) -> Result<Valu
         },
         Kind::Message(m) => Value::Message(json_to_message(m, v)?),
     })
+}
+
+fn as_i32(field: &FieldDescriptor, v: &Json) -> Result<i32> {
+    let n = as_i64(field, v)?;
+    i32::try_from(n)
+        .map_err(|_| anyhow!("field `{}`: value {n} out of range for int32", field.name()))
+}
+
+fn as_u32(field: &FieldDescriptor, v: &Json) -> Result<u32> {
+    let n = as_u64(field, v)?;
+    u32::try_from(n)
+        .map_err(|_| anyhow!("field `{}`: value {n} out of range for uint32", field.name()))
 }
 
 fn as_i64(field: &FieldDescriptor, v: &Json) -> Result<i64> {

@@ -45,3 +45,13 @@ fn unknown_field_is_rejected() {
     let err = gl_rdr::transcode::json_to_bytes(&sample, &json!({"nope": 1})).unwrap_err();
     assert!(err.to_string().contains("unknown field"));
 }
+
+#[test]
+fn out_of_range_int32_is_rejected() {
+    let pool = fixture_pool();
+    let sample = pool.get_message_by_name("fixture.Sample").unwrap();
+    // i32::MAX + 1 must not silently wrap to a negative number.
+    let err = gl_rdr::transcode::json_to_bytes(&sample, &serde_json::json!({"small": 2147483648u64}))
+        .unwrap_err();
+    assert!(err.to_string().contains("out of range"));
+}
