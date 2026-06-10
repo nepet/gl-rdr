@@ -9,10 +9,12 @@ proto names, not protobuf-JSON's lowerCamelCase), supplied as `key=value` pairs
 (the `lightning-cli -k` experience) or a full `--params-json` object, with
 auto/`--text`/`--strict-json` value parsing.
 
-**Outputs:** instead of canonical protobuf-JSON, we render CLN-flavored JSON —
-64-bit integers as JSON numbers and `bytes` as hex — via a descriptor-walking
-serializer (prost-reflect's `stringify_64_bit_integers(false)` for the integers,
-plus a hex post-pass over byte fields, since protobuf-JSON mandates base64).
+**Outputs:** instead of canonical protobuf-JSON, we render CLN-flavored JSON via
+a fully custom descriptor-walking serializer (`message_to_cln_json` /
+`value_to_cln_json`) that builds the JSON directly from the decoded
+`DynamicMessage` — 64-bit integers as JSON numbers, `bytes` fields as lowercase
+hex, and enum values as their names. prost-reflect's serde serializer is not
+used.
 
 **Discovery:** the same fidelity extends to help. `glrdr --help` is the standard
 clap usage/options/examples, but `glrdr help` lists all methods grouped by
