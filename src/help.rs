@@ -17,30 +17,42 @@ fn kind_label(kind: &Kind) -> String {
     }
 }
 
-/// List all methods, grouped by service, in the same priority order used for
-/// resolution.
-pub fn list_methods() -> String {
-    let pool = descriptor::pool();
-    let mut out = String::new();
-    for svc_name in ["cln.Node", "greenlight.Node"] {
-        let Some(svc) = pool.get_service_by_name(svc_name) else {
-            continue;
-        };
-        out.push_str(svc_name);
-        out.push_str(":\n");
-        let mut names: Vec<String> = svc
-            .methods()
-            .filter(|m| !(m.is_server_streaming() || m.is_client_streaming()))
-            .map(|m| m.name().to_lowercase())
-            .collect();
-        names.sort();
-        for name in names {
-            out.push_str("  ");
-            out.push_str(&name);
-            out.push('\n');
-        }
+fn emit_service(svc: &prost_reflect::ServiceDescriptor, out: &mut String) {
+    out.push_str(svc.full_name());
+    out.push_str(":\n");
+    let mut names: Vec<String> = svc
+        .methods()
+        .filter(|m| !(m.is_server_streaming() || m.is_client_streaming()))
+        .map(|m| m.name().to_lowercase())
+        .collect();
+    names.sort();
+    for name in names {
+        out.push_str("  ");
+        out.push_str(&name);
         out.push('\n');
     }
+    out.push('\n');
+}
+
+/// List all methods, grouped by service. Default services come first in
+/// resolution-priority order; any additional services in the pool (e.g. those
+/// loaded via `--descriptor`) follow.
+pub fn list_methods(pool: &prost_reflect::DescriptorPool) -> String {
+    let mut out = String::new();
+
+    // Default services first, in priority order.
+    for svc_name in descriptor::DEFAULT_SERVICES {
+        if let Some(svc) = pool.get_service_by_name(svc_name) {
+            emit_service(&svc, &mut out);
+        }
+    }
+    // Then any other services present in the pool.
+    for svc in pool.services() {
+        if !descriptor::DEFAULT_SERVICES.contains(&svc.full_name()) {
+            emit_service(&svc, &mut out);
+        }
+    }
+
     out.push_str("Use `glrdr help <method>` for a method's parameters.\n");
     out
 }
@@ -79,10 +91,12 @@ pub fn describe_method(method: &MethodDescriptor) -> String {
 mod tests {
     use super::*;
     use crate::descriptor::resolve;
+    use prost::Message as _;
+    use prost_reflect::DescriptorPool;
 
     #[test]
     fn list_groups_by_service_and_includes_getinfo() {
-        let listing = list_methods();
+        let listing = list_methods(descriptor::pool());
         assert!(listing.contains("cln.Node:"));
         assert!(listing.contains("greenlight.Node:"));
         assert!(listing.contains("getinfo"));
@@ -90,15 +104,24 @@ mod tests {
     }
 
     #[test]
+    fn list_includes_non_default_services() {
+        let fds = protox::compile(["tests/fixtures/addon.proto"], ["tests/fixtures"]).unwrap();
+        let pool = DescriptorPool::decode(fds.encode_to_vec().as_slice()).unwrap();
+        let listing = list_methods(&pool);
+        assert!(listing.contains("addon.Addon:"), "listing was: {listing}");
+        assert!(listing.contains("ping"), "listing was: {listing}");
+    }
+
+    #[test]
     fn describe_getinfo_renders_path() {
-        let m = resolve("getinfo", None).unwrap();
+        let m = resolve(descriptor::pool(), "getinfo", None).unwrap();
         let text = describe_method(&m);
         assert!(text.contains("/cln.Node/Getinfo"));
     }
 
     #[test]
     fn describe_pay_lists_bolt11_field() {
-        let m = resolve("pay", None).unwrap();
+        let m = resolve(descriptor::pool(), "pay", None).unwrap();
         let text = describe_method(&m);
         assert!(text.contains("bolt11"));
     }

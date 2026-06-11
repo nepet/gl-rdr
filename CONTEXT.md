@@ -40,8 +40,16 @@ methods). `cln.Node` is the default.
 
 **Method**:
 The friendly, case-insensitive RPC name a user types (`getinfo`). Resolved
-against the bundled descriptor to a **Path**.
+against the **Descriptor** to a **Path**.
 _Avoid_: "command", "RPC" used interchangeably with Path.
+
+**Descriptor** (`--descriptor`):
+The protobuf schema `gl-rdr` resolves and decodes against. It bundles one built
+from the CLN and Greenlight protos; `--descriptor` (or `GL_DESCRIPTOR`) layers a
+precompiled `FileDescriptorSet` over it for methods the bundle is missing — a
+newer node, or an addon. A file that shares a bundled file's name **replaces** it
+(so you can ship a newer `node.proto` and reach its new methods); other files are
+added. See [ADR 0003](docs/adr/0003-load-external-descriptors.md).
 
 **Path**:
 The fully-qualified gRPC route a Method resolves to, e.g. `/cln.Node/Getinfo`.
@@ -60,8 +68,9 @@ _Avoid_: "auth header", "JWT".
 
 **Raw mode** (`--raw`):
 Bypasses JSON↔protobuf conversion: the user supplies already-encoded protobuf
-and receives raw response bytes. The future-proof escape hatch for anything the
-bundled descriptor does not cover.
+and receives raw response bytes. The bytes-level fallback for anything the schema
+can't help with; for an unbundled method, prefer **--descriptor** so it still
+decodes.
 
 ## Out of scope
 
@@ -90,5 +99,7 @@ attached elsewhere (`glcli signer run`, ideally on always-on hardware).
 > signs it with the **Device** key and attaches the **Rune** — so the **Node**
 > can verify it end-to-end.
 > **Dev:** And if the node added a brand-new method we haven't bundled yet?
-> **Expert:** Then there's no descriptor entry to build from, so you drop to
-> **Raw mode**: encode the protobuf yourself and pass the **Path** directly.
+> **Expert:** Point `--descriptor` at a compiled descriptor set for it and it
+> resolves and decodes like any bundled method. If you don't even have the
+> schema, drop to **Raw mode**: encode the protobuf yourself and pass the
+> **Path** directly.

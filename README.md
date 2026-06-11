@@ -104,10 +104,29 @@ Greenlight keeps your keys in a separate signer, not in `glrdr`. So:
   sent fine but won't *complete* until a signer answers. Run one on your
   always-on box: `glcli signer run`.
 
+## Methods glrdr doesn't bundle
+
+`glrdr` only knows the methods it was built with. When your node runs ahead — a
+newer `cln.Node` method like `xpay`, say — hand `glrdr` the node's own
+`node.proto` via `--descriptor` (or `GL_DESCRIPTOR`). It loads in place of the
+bundled copy, so the new method routes correctly, takes `key=value` params, and
+decodes to JSON like any other:
+
+```bash
+protoc --include_imports --descriptor_set_out=node.bin node.proto
+glrdr --descriptor node.bin xpay invstring=lnbc...
+```
+
+A descriptor file replaces the bundled file with the same name (so name yours
+`node.proto` to override the schema) and adds any files that are new. Supply the
+*whole* file — it replaces wholesale — and compile it with `--include_imports` so
+it's self-contained. See
+[ADR 0003](docs/adr/0003-load-external-descriptors.md).
+
 ## Raw mode
 
-For anything the bundled schema doesn't cover, `--raw` is a dumb pipe: give it
-the gRPC path and a hex-encoded protobuf request, get hex back.
+When you don't have a schema at all, `--raw` is a dumb pipe: give it the gRPC
+path and a hex-encoded protobuf request, get hex back.
 
 ```bash
 glrdr --raw /cln.Node/Getinfo

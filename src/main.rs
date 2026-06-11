@@ -29,6 +29,11 @@ pub struct Args {
     #[arg(long, env = "GL_CREDS", value_name = "PATH")]
     pub creds: Option<PathBuf>,
 
+    /// Path to an extra protobuf descriptor set (FileDescriptorSet) to merge
+    /// into the schema, for methods not bundled with glrdr
+    #[arg(long, env = "GL_DESCRIPTOR", value_name = "PATH")]
+    pub descriptor: Option<PathBuf>,
+
     /// Connect directly to this gRPC URI instead of using the scheduler
     #[arg(long, value_name = "URI")]
     pub grpc_uri: Option<String>,
@@ -83,12 +88,17 @@ async fn main() {
 async fn run() -> Result<()> {
     let args = Args::parse();
 
+    // Build the descriptor pool once: bundled schema plus any `--descriptor` set.
+    // Done before the raw short-circuit too, so a malformed `--descriptor` fails
+    // fast rather than being silently ignored (raw mode itself never uses `pool`).
+    let pool = descriptor::effective_pool(args.descriptor.as_deref())?;
+
     // `help` discovery short-circuits before any network or descriptor encode.
     if args.method.eq_ignore_ascii_case("help") {
         match args.params.first() {
-            None => print!("{}", help::list_methods()),
+            None => print!("{}", help::list_methods(&pool)),
             Some(name) => {
-                let method = descriptor::resolve(name, args.service.as_deref())
+                let method = descriptor::resolve(&pool, name, args.service.as_deref())
                     .with_context(|| format!("cannot describe `{name}`"))?;
                 print!("{}", help::describe_method(&method));
             }
@@ -101,7 +111,7 @@ async fn run() -> Result<()> {
     }
 
     // Resolve method + build the encoded request.
-    let method = descriptor::resolve(&args.method, args.service.as_deref())?;
+    let method = descriptor::resolve(&pool, &args.method, args.service.as_deref())?;
     if method.is_server_streaming() || method.is_client_streaming() {
         bail!(
             "`{}` is a streaming method; glrdr supports unary calls only",
